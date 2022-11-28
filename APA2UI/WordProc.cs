@@ -1,5 +1,4 @@
 ﻿using OxyPlot;
-using OxyPlot.Axes;
 using OxyPlot.Core.Drawing;
 using OxyPlot.Legends;
 using OxyPlot.Series;
@@ -13,8 +12,12 @@ namespace APA2UI
 {
     public class WordProc
     {
+        private const string V = "\\";
+
         public void word(List<object> A, ref List<double> times)
         {
+            Sorts sorts = new(0);
+
             int k = 0;
             var Shell_time = System.Diagnostics.Stopwatch.StartNew();
             var Quick_time = System.Diagnostics.Stopwatch.StartNew();
@@ -23,8 +26,7 @@ namespace APA2UI
             Quick_time.Stop();
             Radix_time.Stop();
 
-            Sorts sorts = new(0);
-
+            #region ShellSort
             sorts.InsertText2("SHELLSORT", 24, 1);
             sorts.ShellSortTable(A, A.Count, true);
             Shell_time.Reset();
@@ -34,7 +36,9 @@ namespace APA2UI
             sorts.InsertText($"Отсортированный массив:");
             sorts.InsertTable1(A);
             sorts.InsertText($"Понадобилось {Shell_time.Elapsed.TotalSeconds} секунд на сортировку");
+            #endregion
 
+            #region QuickSort
             sorts.InsertText2("QUICKSORT", 24, 1);
             sorts.QuickSortTable(A, 0, A.Count - 1, true);
             Quick_time.Reset();
@@ -44,7 +48,9 @@ namespace APA2UI
             sorts.InsertText($"Отсортированный массив:");
             sorts.InsertTable1(A);
             sorts.InsertText($"Понадобилось {Quick_time.Elapsed.TotalSeconds} секунд на сортировку");
+            #endregion
 
+            #region RadixSort
             sorts.InsertText2("RADIXSORT", 24, 1);
             sorts.RadixSortTable(A, A.Count, true);
             Radix_time.Reset();
@@ -54,42 +60,55 @@ namespace APA2UI
             sorts.InsertText("Отсорированный массив:");
             sorts.InsertTable1(A);
             sorts.InsertText($"Понадобилось {Radix_time.Elapsed.TotalSeconds} секунд на сортировку");
+            #endregion
 
+            #region Results
             sorts.InsertText2("Result:", 24, 1);
             sorts.InsertText($"ShellSort: {Shell_time.Elapsed.TotalSeconds} секунд");
             sorts.InsertText($"QuickSort: {Quick_time.Elapsed.TotalSeconds} секунд");
             sorts.InsertText($"RadixSort: {Radix_time.Elapsed.TotalSeconds} секунд");
+            #endregion
 
+            #region Timers
             times.Add(Shell_time.Elapsed.TotalSeconds);
             times.Add(Quick_time.Elapsed.TotalSeconds);
             times.Add(Radix_time.Elapsed.TotalSeconds);
+            #endregion
 
-            Graphs();
-            string folder = @"C:\Users\djuls\Documents\uni\year2\APA\data\";
+            #region Path Creation
+            string path1 = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + V;
+            string folder = System.IO.Path.Combine(path1, "data" + V);
+            if (!Directory.Exists(folder))
+            {
+                System.IO.Directory.CreateDirectory(folder);
+            }
+            #endregion
+
+            Graphs(folder);
+
             sorts.InsertImage(folder + "iterations.png");
             sorts.InsertImage(folder + "Time.png");
 
-            sorts.Save();
+            sorts.Save(folder);
             sorts.Close();
         }
-
-        public void Graphs()
+        public void Graphs(string path)
         {
+            Sorts sorts = new Sorts(1);
+
             var width = 1024;
             var height = 768;
             var resolution = 96d;
-
-            Sorts sorts = new Sorts(1);
-            string folder = @"C:\Users\djuls\Documents\uni\year2\APA\data\";
+            string folder = path;
 
             #region File Names
-            string Shell_Time_File = "ShellSortTime.txt";
-            string Quick_Time_File = "QuickSortTime.txt";
-            string Radix_Time_File = "RadixSortTime.txt";
+            string Shell_Time_File = "Time_ShellSort.txt";
+            string Quick_Time_File = "Time_QuickSort.txt";
+            string Radix_Time_File = "Time_RadixSort.txt";
 
-            string Shell_Iterations_File = "ShellSortIterations.txt";
-            string Quick_Iterations_File = "QuickSortIterations.txt";
-            string Radix_Iterations_File = "RadixSortIterations.txt";
+            string Shell_Iterations_File = "Iterations_ShellSort.txt";
+            string Quick_Iterations_File = "Iterations_QuickSort.txt";
+            string Radix_Iterations_File = "Iterations_RadixSort.txt";
             #endregion
 
             #region #region Files Paths
@@ -105,6 +124,7 @@ namespace APA2UI
             OxyPlot.PlotModel plotModel = new();
             OxyPlot.PlotModel plotModel1 = new();
 
+            #region Legends
             plotModel.Legends.Add(new Legend()
             {
                 LegendSymbolLength = 60,
@@ -115,14 +135,17 @@ namespace APA2UI
                 LegendSymbolLength = 60,
                 LegendFontSize = 24
             });
+            #endregion
 
             plotModel.PlotType = OxyPlot.PlotType.Cartesian;
             plotModel1.PlotType = OxyPlot.PlotType.Cartesian;
 
+            #region Title Setup
             plotModel.Title = "Практический график зависимости времени от количества элементов";
             plotModel1.Title = "Практический график зависимости количества итераций от количества элементов";
             plotModel.TitleFontSize = 24;
             plotModel1.TitleFontSize = 24;
+            #endregion
 
             #region Time LineSeries
             OxyPlot.Series.LineSeries Shell_Time_lineSeries = new()
@@ -192,6 +215,7 @@ namespace APA2UI
                 List<object> arr = new();
                 GenerateNewArray(ref arr, i);
 
+                #region Timers
                 Shell_time.Reset();
                 Shell_time.Start();
                 sorts.ShellSort(arr, arr.Count, ref iterationsShell);
@@ -204,6 +228,7 @@ namespace APA2UI
                 Radix_time.Start();
                 sorts.RadixSort(arr, arr.Count, ref iterationsRadix);
                 Radix_time.Stop();
+                #endregion
 
                 #region Adding Points
                 Shell_Time_lineSeries.Points.Add(new DataPoint(i, Shell_time.Elapsed.TotalSeconds));
@@ -226,6 +251,7 @@ namespace APA2UI
                 #endregion
             }
 
+            #region Points
             List<LineSeries> timePoints = new()
             {
                 Shell_Time_lineSeries,
@@ -239,12 +265,13 @@ namespace APA2UI
                 Quick_Iterations_lineSeries,
                 Radix_Iterations_lineSeries
             };
+            #endregion
 
             string Timetofile = folder + "Time.png";
             string Iterationstofile = folder + "Iterations.png";
 
-            GraphGeneration(ref plotModel, timePoints, 0);
-            GraphGeneration2(ref plotModel1, iterationPoints, 0);
+            GraphGeneration(ref plotModel, timePoints);
+            GraphGeneration2(ref plotModel1, iterationPoints);
 
             #region Exporting To PNG
             var TimePngExporter = new PngExporter
@@ -264,9 +291,9 @@ namespace APA2UI
             #endregion
 
         }
-
-        private void GraphGeneration(ref OxyPlot.PlotModel tmp, List<LineSeries> time, double max_val)
+        private void GraphGeneration(ref OxyPlot.PlotModel tmp, List<LineSeries> time)
         {
+            #region X Axis Setup
             OxyPlot.Axes.LinearAxis Xaxis = new();
             Xaxis.Title = "Размерность массива";
             Xaxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
@@ -275,7 +302,9 @@ namespace APA2UI
             Xaxis.AbsoluteMinimum = 100;
             Xaxis.MajorStep = 100;
             tmp.Axes.Add(Xaxis);
+            #endregion
 
+            #region Y Axis Setup
             OxyPlot.Axes.LinearAxis Yaxis = new();
             Yaxis.Title = "Время выполнения";
             Yaxis.Position = OxyPlot.Axes.AxisPosition.Left;
@@ -284,14 +313,16 @@ namespace APA2UI
             Yaxis.AbsoluteMaximum = 0.0025;
             Yaxis.MajorStep = 0.0001;
             tmp.Axes.Add(Yaxis);
+            #endregion
 
             foreach (var pointo in time)
             {
                 tmp.Series.Add(pointo);
             }
         }
-        private void GraphGeneration2(ref OxyPlot.PlotModel tmp, List<LineSeries> time, double max_val_1)
+        private void GraphGeneration2(ref OxyPlot.PlotModel tmp, List<LineSeries> time)
         {
+            #region X Axis Setup
             OxyPlot.Axes.LinearAxis Xaxis = new();
             Xaxis.Title = "Размерность массива";
             Xaxis.FontSize = 24;
@@ -300,8 +331,9 @@ namespace APA2UI
             Xaxis.AbsoluteMinimum = 100;
             Xaxis.MajorStep = 100;
             tmp.Axes.Add(Xaxis);
+            #endregion
 
-            //Define X-Axis
+            #region Y Axis Setup
             OxyPlot.Axes.LinearAxis Yaxis = new();
             Yaxis.Title = "Количество итераций";
             Yaxis.FontSize = 24;
@@ -310,6 +342,7 @@ namespace APA2UI
             Yaxis.AbsoluteMaximum = 100000;
             Yaxis.MajorStep = 5000;
             tmp.Axes.Add(Yaxis);
+            #endregion
 
             foreach (var pointo in time)
             {
@@ -362,14 +395,11 @@ namespace APA2UI
             }
             public void InsertTable(List<object> A, int mark1, int mark2, Word.WdColor color)
             {
-                //Word.Border border = 0;
-                //border.LineStyle = Word.WdLineStyle.wdLineStyleTriple;
                 int cols = A.Count;
                 Word.Table otable;
                 Word.Range wrdrng = wordGen.odoc.Bookmarks.get_Item(ref wordGen.oendofdoc).Range;
                 otable = wordGen.odoc.Tables.Add(wrdrng, 1, cols, 1, 2);
                 otable.Range.ParagraphFormat.SpaceAfter = 6;
-                //otable.Borders.InsideLineStyle = Word.WdLineStyle.wdLineStyleTriple;
 
                 for (int i = 1; i <= cols; i++)
                 {
@@ -385,7 +415,6 @@ namespace APA2UI
                     otable.Cell(1, mark1).Shading.BackgroundPatternColor = color;
                     otable.Cell(1, mark2).Shading.BackgroundPatternColor = color;
                 }
-                //otable.Cell(step + 2, location + 3).Shading.BackgroundPatternColor = Word.WdColor.wdColorAqua;
             }
             public void InsertTable1(List<object> A)
             {
@@ -406,12 +435,11 @@ namespace APA2UI
             public void Close()
             {
                 wordGen.oword.Quit();
-                wordGen.odoc.Close();
             }
-            public void Save()
+            public void Save(string path)
             {
-                wordGen.odoc.SaveAs2("report", 17);
-                wordGen.odoc.SaveAs2("report", 16);
+                wordGen.odoc.SaveAs2(path + "report", 17);
+                wordGen.odoc.SaveAs2(path + "report", 16);
             }
 
             public void InsertImage(string path)
@@ -467,8 +495,6 @@ namespace APA2UI
             }
             public void QuickSort(List<object> A, int start, int end, ref int iterations)
             {
-                //watch.Reset();
-                //watch.Start();
                 // base case
                 if (start >= end)
                     return;
@@ -809,6 +835,7 @@ namespace APA2UI
                 }
                 #endregion
             }
+
         }
     }
 }

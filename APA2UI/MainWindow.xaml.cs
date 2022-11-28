@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Word = Microsoft.Office.Interop.Word;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace APA2UI
 {
@@ -12,12 +14,11 @@ namespace APA2UI
     {
         public MainWindow()
         {
+            Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
             InitializeComponent();
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            Column_generator(GridManipulation);
+            cerrulan.Foreground = new SolidColorBrush(Color.FromRgb(255, 241, 230));
+            cerrulan.Background = new SolidColorBrush(Color.FromRgb(11, 142, 194));
+            cerrulan.Background.Opacity = 0.7;
         }
 
         private void Random_generator(object sender, RoutedEventArgs e)
@@ -33,9 +34,14 @@ namespace APA2UI
 
             fill_cols(GridManipulation);
         }
-
-        private void Column_generator(Grid gridman)
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
+            Column_generator(GridManipulation, false);
+        }
+        private void Column_generator(Grid gridman, bool isreadonly)
+        {
+            VB2.MaxHeight = 100;
+
             if (count != 0)
             {
                 gridman.Children.Clear();
@@ -58,12 +64,13 @@ namespace APA2UI
                 tempik.BorderBrush = new SolidColorBrush(Color.FromRgb(168, 152, 124));
                 tempik.BorderThickness = new Thickness(2, 2, 2, 2);
                 tempik.MinWidth = 50;
+                tempik.MaxHeight = 30;
+                tempik.IsReadOnly = isreadonly;
                 Grid.SetColumn(tempik, j);
                 gridman.Children.Add(tempik);
             }
             count++;
         }
-
         private void fill_cols(Grid gridman)
         {
             for (int i = 0; i < gridman.Children.Count; i++)
@@ -72,19 +79,9 @@ namespace APA2UI
                 child.Text = Array[i].ToString();
             }
         }
-
         private void Sort(object sender, RoutedEventArgs e)
         {
-            Viewbox vb3 = new() { Stretch = Stretch.Uniform, VerticalAlignment = VerticalAlignment.Top };
-            StackPanel stackPanel = new() { Orientation = Orientation.Vertical, Margin = new Thickness(1, 5, 1, 5) };
-            Grid grid = new();
-            TextBlock text = new();
-
-            StackP1.Children.Add(vb3);
-            vb3.Child = stackPanel;
-            stackPanel.Children.Add(grid);
-
-
+            VB3.MaxHeight = 100;
             if (Array.Count == 0)
             {
                 for (int i = 0; i < GridManipulation.Children.Count; i++)
@@ -94,18 +91,10 @@ namespace APA2UI
                     Array.Add(Convert.ToInt32(tempik.Text));
                 }
             }
-
             Array.Sort();
-
-            Column_generator(grid);
-            fill_cols(grid);
-
-            StackP1.Children.Add(text);
-
+            Column_generator(SortGrid, true);
+            fill_cols(SortGrid);
         }
-
-
-
         private void Export_to_Word(object sender, RoutedEventArgs e)
         {
             if (Array.Count == 0)
@@ -121,32 +110,53 @@ namespace APA2UI
             WordProc wordproc = new();
             wordproc.word(Array, ref Time_t);
 
-            wordproc.Graphs();
+            //wordproc.Graphs();
             List<string> sortsnames = new() { "ShellSort", "QuickSort", "RadixSort" };
+
             for (int i = 0; i < Time_t.Count; i++)
             {
                 TextBlock textBlock = new();
-                textBlock.FontSize = 20;
+                textBlock.FontSize = 30;
+                textBlock.Foreground = Brushes.Beige;
                 textBlock.Text = sortsnames[i] + " : " + Time_t[i].ToString();
                 StackP1.Children.Add(textBlock);
             }
         }
-
-
-        public List<object> Array = new List<object>();
-        private List<TextBox> box = new();
-        private int count = 0;
-        private int clicked_sort = 0;
-        public int Count { get { return count; } }
-        public List<TextBox> Box { get { return box; } }
-
-        public List<double> Time_t = new();
-
         private void Window_main_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
                 this.DragMove();
         }
+        private void Window_main_Deactivated(object sender, EventArgs e)
+        {
+            this.Activate();
+        }
 
+        private const string V = "\\";
+        public List<object> Array = new();
+        private List<TextBox> box = new();
+        private int count = 0;
+        private int clicked_sort = 0;
+        public List<double> Time_t = new();
+
+        private void OpenPdf(object sender, RoutedEventArgs e)
+        {
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + V;
+            string pathString = System.IO.Path.Combine(path, "data");
+            if (!System.IO.Directory.Exists(pathString))
+            {
+                System.IO.Directory.CreateDirectory(pathString);
+            }
+
+            using (Process compiler = new())
+            {
+                compiler.StartInfo.FileName = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
+                compiler.StartInfo.Arguments = path + "report.pdf";
+                compiler.Start();
+                compiler.WaitForExit();
+            }
+
+
+        }
     }
 }

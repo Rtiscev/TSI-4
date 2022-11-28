@@ -6,48 +6,73 @@
         xmlns:oxy="http://oxyplot.org/wpf"
         xmlns:local="clr-namespace:APA2UI"
         mc:Ignorable="d"
+        
         Name="Window_main"
-        Title="2 Лабораторная работа" Height="800" Width="948"
+        Title="2 Лабораторная работа" 
+        Height="500"
+        Width="700"
+        MinHeight="500"
+        MinWidth="700"
         WindowStyle="None"
+        Icon="C:\Users\djuls\Documents\icon.ico"
         Background="Transparent"
+        Deactivated="Window_main_Deactivated"
         AllowsTransparency="True"
+        ResizeMode="CanResizeWithGrip"
         MouseDown="Window_main_MouseDown">
 
 
-    <Border CornerRadius="20" Padding="10" DockPanel.Dock="Top" >
+    <Border Name="borda" CornerRadius="20" Padding="10" >
         <Border.Background>
             <ImageBrush ImageSource="C:\Users\djuls\Documents\image2r.png"></ImageBrush>
         </Border.Background>
-        <DockPanel>
-            <StackPanel DockPanel.Dock="Top" Name="StackP1">
+        <!--<DockPanel Name="dock" Height="{Binding ElementName=borda, Path=ActualHeight,Mode=OneWay}">-->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="11*"></RowDefinition>
+                <RowDefinition Height="1*"></RowDefinition>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Name="StackP1">
                 <Viewbox Name="VB1" Stretch="Uniform" VerticalAlignment="Top">
-                    <WrapPanel Name="WP1" Grid.Row="0">
-                        <TextBlock Foreground="Beige">Введите количество элементов массива:</TextBlock>
-                        <TextBox Name="Amount_of_elements" MinWidth="20"/>
-                        <Button Click="Button_Click" Content="Ввести" Width="50"/>
-                        <Button Click="Random_generator" Content="Рандомизировать" Width="120"/>
-                        <Button Click="Sort" Content="Сортировать"></Button>
-                        <Button Click="Export_to_Word" Content="to Word"></Button>
+                    <WrapPanel Name="WP1">
+                        <TextBlock FontSize="20" Foreground="Beige">Введите количество элементов массива:</TextBlock>
+                        <TextBox Height="32" FontSize="20" VerticalContentAlignment="Center" TextAlignment="Center" Name="Amount_of_elements" MinWidth="20"/>
+                        <Button Height="30" BorderBrush="BlanchedAlmond" Margin="2" Click="Button_Click" Content="Ввести" Width="50"/>
+                        <Button Height="30" BorderBrush="BlanchedAlmond" Margin="2" Click="Random_generator" Content="Рандомизировать" Width="120"/>
+                        <Button Height="30" BorderBrush="BlanchedAlmond" Margin="2" Click="Sort" Content="Сортировать"></Button>
+                        <Button Height="30" BorderBrush="BlanchedAlmond" Margin="2" Click="Export_to_Word" Content="to Word"></Button>
                     </WrapPanel>
                 </Viewbox>
 
-                <Viewbox VerticalAlignment="Top">
-                    <Grid VerticalAlignment="Top">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1*"></ColumnDefinition>
-                            <ColumnDefinition Width="auto"></ColumnDefinition>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Foreground="Beige" VerticalAlignment="Top" TextAlignment="Left" FontSize="20">Введённый массив:</TextBlock>
-                        <TextBlock Grid.Column="1" MinWidth="100"></TextBlock>
-                    </Grid>
+                <Viewbox HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <WrapPanel MinWidth="700">
+                        <TextBlock Foreground="Beige" VerticalAlignment="Top" TextAlignment="Left" FontSize="20" >Введённый массив:</TextBlock>
+                        <Button Click="OpenPdf" Content="Открыть PDF"></Button>
+                    </WrapPanel>
                 </Viewbox>
+
                 <Viewbox Name="VB2" Stretch="Uniform" VerticalAlignment="Top">
                     <StackPanel Orientation="Vertical" Margin="1,5,1,5">
                         <Grid Name="GridManipulation"/>
                     </StackPanel>
                 </Viewbox>
-                <TextBlock Foreground="Beige" FontSize="40"> Сортированный массив:</TextBlock>
+
+                <Viewbox>
+                    <TextBlock Foreground="Beige"  VerticalAlignment="Top" TextAlignment="Left" FontSize="30" MinWidth="900" Height="auto"> Сортированный массив:</TextBlock>
+                </Viewbox>
+
+                <Viewbox Name="VB3" Stretch="Uniform" VerticalAlignment="Top">
+                    <StackPanel Orientation="Vertical" Margin="1,5,1,5" Height="auto">
+                        <Grid Name="SortGrid"/>
+                    </StackPanel>
+                </Viewbox>
+
             </StackPanel>
-        </DockPanel>
+
+            <Viewbox Grid.Row="1" >
+                <TextBlock Name="cerrulan"  Grid.Row="1" FontSize="30" MinWidth="900" FontFamily="Ryan"  TextAlignment="Center">
+                Лабораторная работа №2</TextBlock>
+            </Viewbox>
+        </Grid>
     </Border>
 </Window>
