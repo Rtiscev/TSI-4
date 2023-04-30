@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace APA2UI
+namespace TSI4
 {
     /// <summary>
     /// Interaction logic for App.xaml

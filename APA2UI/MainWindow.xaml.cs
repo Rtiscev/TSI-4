@@ -1,126 +1,263 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Runtime.InteropServices;
 using System.Text;
+using System.Security.Cryptography;
+using System.IO;
+using Path = System.IO.Path;
+using Microsoft.Win32;
+using System.Collections.Generic;
 
-namespace APA2UI
+namespace TSI4
 {
     public partial class MainWindow : Window
     {
+        UnicodeEncoding ByteConverter = new();
+        RSACryptoServiceProvider _RSA = new();
+        byte[] encryptedtext;
+        byte[] signedHash;
+        RSAParameters sharedParameters;
+        string roundtrip;
+        SHA256 alg = SHA256.Create();
+        int typeOfEnc = 0;
+        Aes myAes = Aes.Create();
+        Aes aes = Aes.Create();
+        List<string> keys = new();
+
         public MainWindow()
         {
-            Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
             InitializeComponent();
-            cerrulan.Foreground = new SolidColorBrush(Color.FromRgb(255, 241, 230));
-            cerrulan.Background = new SolidColorBrush(Color.FromRgb(11, 142, 194));
-            cerrulan.Background.Opacity = 0.7;
+            grido.Width = borda.Width;
         }
 
-        private void Random_generator(object sender, RoutedEventArgs e)
+        private void SelectFiles(object sender, RoutedEventArgs e)
         {
-            Array.Clear();
-
-            Random rnd = new();
-            for (int i = 0; i < GridManipulation.Children.Count; i++)
+            OpenFileDialog openFileDialog = new()
             {
-                int num = rnd.Next(101);
-                Array.Add(num);
-            }
-
-            fill_cols(GridManipulation);
-        }
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            Column_generator(GridManipulation, false);
-        }
-        private void Column_generator(Grid gridman, bool isreadonly)
-        {
-            VB2.MaxHeight = 100;
-
-            if (count != 0)
+                Multiselect = true,
+                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+            };
+            if (openFileDialog.ShowDialog() == true)
             {
-                gridman.Children.Clear();
-            }
-            int c = int.Parse(Amount_of_elements.Text);
-
-            ColumnDefinition[] coldef = new ColumnDefinition[c];
-
-            for (int j = 0; j < c; j++)
-            {
-                coldef[j] = new ColumnDefinition();
-                gridman.ColumnDefinitions.Add(coldef[j]);
-            }
-            for (int j = 0; j < c; j++)
-            {
-                TextBox tempik = new();
-                tempik.TextAlignment = TextAlignment.Center;
-                tempik.Foreground = Brushes.Black;
-                tempik.Background = new SolidColorBrush(Colors.White) { Opacity = 0.75 };
-                tempik.BorderBrush = new SolidColorBrush(Color.FromRgb(168, 152, 124));
-                tempik.BorderThickness = new Thickness(2, 2, 2, 2);
-                tempik.MinWidth = 50;
-                tempik.MaxHeight = 30;
-                tempik.IsReadOnly = isreadonly;
-                Grid.SetColumn(tempik, j);
-                gridman.Children.Add(tempik);
-            }
-            count++;
-        }
-        private void fill_cols(Grid gridman)
-        {
-            for (int i = 0; i < gridman.Children.Count; i++)
-            {
-                TextBox child = (TextBox)gridman.Children[i];
-                child.Text = Array[i].ToString();
+                foreach (string filename in openFileDialog.FileNames)
+                    keys.Add(Path.GetFullPath(filename));
             }
         }
-        private void Sort(object sender, RoutedEventArgs e)
+        private void EncryptFile(object sender, RoutedEventArgs e)
         {
-            VB3.MaxHeight = 100;
-            if (Array.Count == 0)
+            string password = passwordFiles.Text;
+            //string ivString = ByteConverter.GetString(aes.IV);
+            //string aaaa = ByteConverter.GetString(aes.Key);
+
+            checkThePass(ref password);
+            aes.Key = ByteConverter.GetBytes(password);
+
+            foreach (string fileName in keys)
             {
-                for (int i = 0; i < GridManipulation.Children.Count; i++)
+                string texttt = "";
+                texttt = texttt.Remove(0);
+                using (FileStream filestream1 = new(fileName, FileMode.Open))
                 {
-                    TextBox tempik = new();
-                    tempik = (TextBox)GridManipulation.Children[i];
-                    Array.Add(Convert.ToInt32(tempik.Text));
+                    string line;
+                    using (var sr = new StreamReader(filestream1))
+                    {
+                        while ((line = sr.ReadLine()) != null)
+                        {
+                            texttt += line + "\r\n";
+                        }
+                    }
+                }
+
+                using (FileStream fileStream = new(fileName, FileMode.Truncate))
+                {
+                    aes.GenerateIV();
+                    fileStream.Position = 0;
+                    fileStream.Write(aes.IV, 0, aes.IV.Length);
+                    using (CryptoStream cryptoStream = new(fileStream, aes.CreateEncryptor(), CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter encryptWriter = new(cryptoStream, ByteConverter))
+                        {
+                            encryptWriter.Write(texttt);
+                        }
+                    }
                 }
             }
-            Array.Sort();
-            Column_generator(SortGrid, true);
-            fill_cols(SortGrid);
         }
-        private void Export_to_Word(object sender, RoutedEventArgs e)
+
+
+        private void DecryptFile(object sender, RoutedEventArgs e)
         {
-            if (Array.Count == 0)
+            foreach (string fileName in keys)
             {
-                for (int i = 0; i < GridManipulation.Children.Count; i++)
+                string textor = "";
+                textor = textor.Remove(0);
+                using (FileStream fileStream = new(fileName, FileMode.Open))
                 {
-                    TextBox tempik = new TextBox();
-                    tempik = (TextBox)GridManipulation.Children[i];
-                    Array.Add(Convert.ToInt32(tempik.Text));
+                    byte[] iv = new byte[aes.IV.Length];
+                    int numBytesToRead = aes.IV.Length;
+                    int numBytesRead = 0;
+                    while (numBytesToRead > 0)
+                    {
+                        int n = fileStream.Read(iv, numBytesRead, numBytesToRead);
+                        if (n == 0) break;
+
+                        numBytesRead += n;
+                        numBytesToRead -= n;
+                    }
+                    //string password = "jinx567891234567";
+                    string password = passwordFiles.Text;
+                    aes.IV = iv;
+
+                    checkThePass(ref password);
+                    aes.Key = ByteConverter.GetBytes(password);
+
+                    using (CryptoStream cryptoStream = new(fileStream, aes.CreateDecryptor(aes.Key, aes.IV), CryptoStreamMode.Read))
+                    {
+                        using (StreamReader decryptReader = new(cryptoStream))
+                        {
+                            textor = decryptReader.ReadToEnd();
+                        }
+                    }
+                }
+                using (FileStream filestr = new(fileName, FileMode.Truncate))
+                {
+                    using (StreamWriter encryptWriter = new(filestr, ByteConverter))
+                    {
+                        encryptWriter.Write(textor);
+                    }
+                }
+            }
+            keys.Clear();
+        }
+        private void Encrypt(object sender, RoutedEventArgs e)
+        {
+            typeOfEnc = typeEnc.SelectedIndex;
+            switch (typeOfEnc)
+            {
+                case 0:
+                    encryptedtext = EncryptStringToBytes_Rsa(ByteConverter.GetBytes(messageToEnc.Text), _RSA.ExportParameters(false), false);
+                    break;
+                case 1:
+                    encryptedtext = EncryptStringToBytes_Aes(messageToEnc.Text, myAes.Key, myAes.IV);
+                    break;
+            }
+            encryptedText.Text = System.Convert.ToBase64String(encryptedtext);
+        }
+        private void Decrypt(object sender, RoutedEventArgs e)
+        {
+            switch (typeOfEnc)
+            {
+                case 0:
+                    byte[] decryptedtex = DecryptionStringToBytes_RSA(encryptedtext, _RSA.ExportParameters(true), false);
+                    originalText.Text = ByteConverter.GetString(decryptedtex);
+                    break;
+                case 1:
+                    roundtrip = DecryptStringFromBytes_Aes(encryptedtext, myAes.Key, myAes.IV);
+                    originalText.Text = roundtrip;
+                    break;
+            }
+        }
+        static public byte[] EncryptStringToBytes_Rsa(byte[] Data, RSAParameters RSAKey, bool DoOAEPPadding)
+        {
+            byte[] encryptedData;
+            using (RSACryptoServiceProvider _RSA = new())
+            {
+                _RSA.ImportParameters(RSAKey);
+                encryptedData = _RSA.Encrypt(Data, DoOAEPPadding);
+            }
+            return encryptedData;
+        }
+        static public byte[] DecryptionStringToBytes_RSA(byte[] Data, RSAParameters RSAKey, bool DoOAEPPadding)
+        {
+            byte[] decryptedData;
+            using (RSACryptoServiceProvider _RSA = new())
+            {
+                _RSA.ImportParameters(RSAKey);
+                decryptedData = _RSA.Decrypt(Data, DoOAEPPadding);
+            }
+            return decryptedData;
+        }
+        static byte[] EncryptStringToBytes_Aes(string plainText, byte[] Key, byte[] IV)
+        {
+            // Check arguments.
+            if (plainText == null || plainText.Length <= 0)
+                throw new ArgumentNullException("plainText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+            byte[] encrypted;
+
+            // Create an Aes object
+            // with the specified key and IV.
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = Key;
+                aesAlg.IV = IV;
+
+                // Create an encryptor to perform the stream transform.
+                ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+                // Create the streams used for encryption.
+                using (MemoryStream msEncrypt = new MemoryStream())
+                {
+                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
+                        {
+                            //Write all data to the stream.
+                            swEncrypt.Write(plainText);
+                        }
+                        encrypted = msEncrypt.ToArray();
+                    }
                 }
             }
 
-            WordProc wordproc = new();
-            wordproc.word(Array, ref Time_t);
+            // Return the encrypted bytes from the memory stream.
+            return encrypted;
+        }
+        static string DecryptStringFromBytes_Aes(byte[] cipherText, byte[] Key, byte[] IV)
+        {
+            // Check arguments.
+            if (cipherText == null || cipherText.Length <= 0)
+                throw new ArgumentNullException("cipherText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
 
-            //wordproc.Graphs();
-            List<string> sortsnames = new() { "ShellSort", "QuickSort", "RadixSort" };
+            // Declare the string used to hold
+            // the decrypted text.
+            string plaintext = null;
 
-            for (int i = 0; i < Time_t.Count; i++)
+            // Create an Aes object
+            // with the specified key and IV.
+            using (Aes aesAlg = Aes.Create())
             {
-                TextBlock textBlock = new();
-                textBlock.FontSize = 30;
-                textBlock.Foreground = Brushes.Beige;
-                textBlock.Text = sortsnames[i] + " : " + Time_t[i].ToString();
-                StackP1.Children.Add(textBlock);
+                aesAlg.Key = Key;
+                aesAlg.IV = IV;
+
+                // Create a decryptor to perform the stream transform.
+                ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+
+                // Create the streams used for decryption.
+                using (MemoryStream msDecrypt = new MemoryStream(cipherText))
+                {
+                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+                        {
+
+                            // Read the decrypted bytes from the decrypting stream
+                            // and place them in a string.
+                            plaintext = srDecrypt.ReadToEnd();
+                        }
+                    }
+                }
             }
+
+            return plaintext;
         }
         private void Window_main_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
@@ -131,32 +268,49 @@ namespace APA2UI
         {
             this.Activate();
         }
-
-        private const string V = "\\";
-        public List<object> Array = new();
-        private List<TextBox> box = new();
-        private int count = 0;
-        private int clicked_sort = 0;
-        public List<double> Time_t = new();
-
-        private void OpenPdf(object sender, RoutedEventArgs e)
+        private void CreateSign(object sender, EventArgs e)
         {
-            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + V;
-            string pathString = System.IO.Path.Combine(path, "data");
-            if (!System.IO.Directory.Exists(pathString))
+            byte[] data = Encoding.ASCII.GetBytes("Hello, from the .NET Docs!");
+            byte[] hash = alg.ComputeHash(data);
+
+            // Generate signature
+            RSA rSA = RSA.Create();
+            sharedParameters = rSA.ExportParameters(false);
+
+            RSAPKCS1SignatureFormatter rsaFormatter = new(rSA);
+            rsaFormatter.SetHashAlgorithm(nameof(SHA256));
+
+            signedHash = rsaFormatter.CreateSignature(hash);
+            DigSig.Text = System.Convert.ToBase64String(signedHash);
+        }
+
+        private void VerifySign(object sender, EventArgs e)
+        {
+            byte[] data = Encoding.ASCII.GetBytes("Hello, from the .NET Docs!");
+            byte[] hash = alg.ComputeHash(data);
+
+            // Generate signature
+            RSA rSA = RSA.Create();
+            rSA.ImportParameters(sharedParameters);
+
+            RSAPKCS1SignatureDeformatter rsaDeformatter = new(rSA);
+            rsaDeformatter.SetHashAlgorithm(nameof(SHA256));
+
+            DigVer.Text = (rsaDeformatter.VerifySignature(hash, signedHash)) ? "The signature is valid" : "The signature is not valid";
+        }
+        private void checkThePass(ref string validate)
+        {
+            if (validate.Length < 16)
             {
-                System.IO.Directory.CreateDirectory(pathString);
+                for (int i = validate.Length; i < 16; i++)
+                {
+                    validate += "0";
+                }
             }
-
-            using (Process compiler = new())
+            if (validate.Length > 16)
             {
-                compiler.StartInfo.FileName = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
-                compiler.StartInfo.Arguments = path + "report.pdf";
-                compiler.Start();
-                compiler.WaitForExit();
+                validate = validate.Remove(16);
             }
-
-
         }
     }
 }
